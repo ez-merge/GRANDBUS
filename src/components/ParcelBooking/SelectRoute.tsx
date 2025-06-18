@@ -1,0 +1,237 @@
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import { useStore } from '../../store';
+import { Route } from '../../types';
+import { Calendar as CalendarIcon, Bus } from 'lucide-react';
+import { format, addDays, startOfToday } from 'date-fns';
+import Calendar from 'react-calendar';
+import 'react-calendar/dist/Calendar.css';
+
+interface SelectRouteProps {
+  onSelect: (route: Route, origin: string, destination: string) => void;
+}
+
+const SelectRoute: React.FC<SelectRouteProps> = ({ onSelect }) => {
+  const { darkMode } = useStore();
+  const today = startOfToday();
+  const [selectedDate, setSelectedDate] = React.useState(format(today, 'yyyy-MM-dd'));
+  const [selectedOrigin, setSelectedOrigin] = React.useState('');
+  const [selectedDestination, setSelectedDestination] = React.useState('');
+  const [selectedRoute, setSelectedRoute] = React.useState<Route | null>(null);
+  const [showCalendar, setShowCalendar] = useState(false);
+  
+  const handleDateChange = (date: Date) => {
+    setSelectedDate(format(date, 'yyyy-MM-dd'));
+    setShowCalendar(false);
+  };
+  
+  const handleRouteSelect = (route: Route) => {
+    setSelectedRoute(route);
+    setSelectedOrigin(route.origin);
+    setSelectedDestination('');
+  };
+  
+  const getAvailableDestinations = (route: Route | null) => {
+    if (!route) return [];
+    
+    const destinations = [route.destination];
+    if (route.intermediateStops) {
+      route.intermediateStops.forEach(stop => {
+        destinations.push(stop.name);
+      });
+    }
+    return destinations.filter(dest => dest !== selectedOrigin);
+  };
+
+  const handleDestinationChange = (destination: string) => {
+    setSelectedDestination(destination);
+  };
+  
+  const handleContinue = () => {
+    if (selectedRoute && selectedOrigin && selectedDestination) {
+      const routeWithDate = {
+        ...selectedRoute,
+        selectedDate
+      };
+      onSelect(routeWithDate, selectedOrigin, selectedDestination);
+    }
+  };
+  
+  return (
+    <div className="space-y-6">
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold mb-2">Select Route</h2>
+        <p className="text-gray-600 dark:text-gray-300">
+          Choose your parcel's journey details
+        </p>
+      </div>
+      
+      <div className={`p-6 rounded-xl ${
+        darkMode ? 'bg-gray-800' : 'bg-white'
+      } shadow-md mb-6`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <CalendarIcon size={20} className="text-gray-500 mr-2" />
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Travel Date
+            </label>
+          </div>
+          <button
+            onClick={() => setShowCalendar(!showCalendar)}
+            className="text-blue-600 dark:text-blue-400 text-sm"
+          >
+            Change Date
+          </button>
+        </div>
+        
+        <div className="mt-2 relative">
+          <input
+            type="text"
+            value={format(new Date(selectedDate), 'MMMM d, yyyy')}
+            readOnly
+            className={`w-full p-2 rounded-lg border ${
+              darkMode 
+                ? 'bg-gray-700 border-gray-600 text-white' 
+                : 'bg-white border-gray-300 text-gray-900'
+            } focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer`}
+            onClick={() => setShowCalendar(!showCalendar)}
+          />
+          
+          {showCalendar && (
+            <div className="absolute z-10 mt-2 w-full">
+              <Calendar
+                onChange={handleDateChange}
+                value={new Date(selectedDate)}
+                minDate={today}
+                maxDate={addDays(today, 30)}
+                className={darkMode ? 'react-calendar--dark' : ''}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {selectedRoute ? (
+        <div className={`p-6 rounded-xl ${
+          darkMode ? 'bg-gray-800' : 'bg-white'
+        } shadow-md mt-6`}>
+          <h3 className="text-lg font-medium mb-4">Journey Details</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Origin
+              </label>
+              <select
+                value={selectedOrigin}
+                onChange={(e) => {
+                  setSelectedOrigin(e.target.value);
+                  setSelectedDestination('');
+                }}
+                className={`w-full p-2 rounded-lg border ${
+                  darkMode 
+                    ? 'bg-gray-700 border-gray-600 text-white' 
+                    : 'bg-white border-gray-300 text-gray-900'
+                } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+              >
+                <option value={selectedRoute.origin}>{selectedRoute.origin}</option>
+                {selectedRoute.intermediateStops?.map((stop, index) => (
+                  <option key={index} value={stop.name}>{stop.name}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Destination
+              </label>
+              <select
+                value={selectedDestination}
+                onChange={(e) => handleDestinationChange(e.target.value)}
+                className={`w-full p-2 rounded-lg border ${
+                  darkMode 
+                    ? 'bg-gray-700 border-gray-600 text-white' 
+                    : 'bg-white border-gray-300 text-gray-900'
+                } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+              >
+                <option value="">Select destination</option>
+                {getAvailableDestinations(selectedRoute).map((dest, index) => (
+                  <option key={index} value={dest}>{dest}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
+          <div className="mt-6 flex justify-end">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleContinue}
+              disabled={!selectedDestination}
+              className={`px-6 py-2 rounded-lg ${
+                !selectedDestination
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-blue-600 hover:bg-blue-700'
+              } text-white font-medium`}
+            >
+              Continue
+            </motion.button>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {routes.map((route) => (
+            <motion.div
+              key={route.id}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className={`p-6 rounded-xl ${
+                selectedRoute?.id === route.id
+                  ? 'ring-2 ring-blue-500'
+                  : ''
+              } ${
+                darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-50'
+              } shadow-md cursor-pointer transition-colors`}
+              onClick={() => handleRouteSelect(route)}
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-lg font-medium">{route.origin} - {route.destination}</h3>
+                  {route.intermediateStops && route.intermediateStops.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Stops:</p>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {route.intermediateStops.map((stop, index) => (
+                          <span
+                            key={index}
+                            className={`px-2 py-1 rounded-full text-xs ${
+                              darkMode ? 'bg-gray-700' : 'bg-gray-100'
+                            }`}
+                          >
+                            {stop.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+                  darkMode ? 'bg-blue-900 text-blue-300' : 'bg-blue-100 text-blue-800'
+                }`}>
+                  {route.assignedBuses?.length || 0} buses
+                </div>
+              </div>
+              
+              <div className="mt-4 flex items-center text-sm text-gray-500 dark:text-gray-400">
+                <Bus className="w-4 h-4 mr-1" />
+                <span>Select for details</span>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default SelectRoute;

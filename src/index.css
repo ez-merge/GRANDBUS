@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light dark;
+}
+
+/* Custom styles for dark mode calendar */
+.react-calendar--dark {
+  background-color: #1f2937;
+  color: white;
+  border: none;
+}
+
+.react-calendar--dark .react-calendar__tile {
+  color: white;
+}
+
+.react-calendar--dark .react-calendar__tile:enabled:hover,
+.react-calendar--dark .react-calendar__tile:enabled:focus {
+  background-color: #374151;
+}
+
+.react-calendar--dark .react-calendar__tile--now {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.react-calendar--dark .react-calendar__tile--active {
+  background-color: #2563eb;
+  color: white;
+}
+
+.react-calendar--dark .react-calendar__navigation button:enabled:hover,
+.react-calendar--dark .react-calendar__navigation button:enabled:focus {
+  background-color: #374151;
+}
+
+.react-calendar--dark .react-calendar__month-view__days__day--weekend {
+  color: #f87171;
+}
+
+.react-calendar--dark .react-calendar__month-view__days__day--neighboringMonth {
+  color: #6b7280;
+}
+
+/* Dark mode overrides */
+.dark {
+  color-scheme: dark;
+  background-color: #111827;
+  color: #fff;
+}
+
+.dark * {
+  border-color: #374151;
+}
+
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: #1f2937;
+  color: #fff;
+}
+
+.dark input::placeholder,
+.dark select::placeholder,
+.dark textarea::placeholder {
+  color: #9ca3af;
+}
+
+.dark input:focus,
+.dark select:focus,
+.dark textarea:focus {
+  border-color: #3b82f6;
+}
