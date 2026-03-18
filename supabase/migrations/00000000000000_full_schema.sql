@@ -9,9 +9,10 @@
     3. All indexes
     4. Enable RLS on all tables
     5. All RLS policies (after all tables exist)
-    6. All triggers
-    7. Business logic functions
-    8. Seed data
+    6. Table grants for Supabase roles
+    7. All triggers
+    8. Business logic functions
+    9. Seed data
 */
 
 -- ============================================================================
@@ -552,7 +553,25 @@ CREATE POLICY "Admins can manage expenses"
   ));
 
 -- ============================================================================
--- 6. TRIGGERS
+-- 6. GRANT TABLE PERMISSIONS TO SUPABASE ROLES
+-- ============================================================================
+
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon;
+
+-- Ensure future tables also get proper grants
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT SELECT ON TABLES TO anon;
+
+-- Grant execute on functions
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO authenticated;
+
+-- ============================================================================
+-- 7. All triggers
 -- ============================================================================
 
 -- updated_at triggers
@@ -609,7 +628,7 @@ CREATE TRIGGER ensure_role_update_security
   FOR EACH ROW EXECUTE FUNCTION validate_role_update();
 
 -- ============================================================================
--- 7. BUSINESS LOGIC FUNCTIONS
+-- 8. BUSINESS LOGIC FUNCTIONS
 -- ============================================================================
 
 -- Seat lock management (per date)
@@ -863,7 +882,7 @@ CREATE TRIGGER on_parcel_cancelled
   EXECUTE FUNCTION handle_parcel_cancellation();
 
 -- ============================================================================
--- 8. SEED DATA
+-- 9. SEED DATA
 -- ============================================================================
 
 INSERT INTO expense_categories (name, description) VALUES
