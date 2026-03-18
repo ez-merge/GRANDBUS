@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import { CreditCard, DollarSign, Download, TrendingUp, Users } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { endOfMonth, endOfWeek, format, startOfMonth, startOfWeek } from 'date-fns';
+
+import { jsPDF } from 'jspdf';
 import { motion } from 'framer-motion';
-import { useStore } from '../../store';
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
-import { Download, TrendingUp, DollarSign, Users, CreditCard } from 'lucide-react';
 import { supabase } from '../../api';
 import { toast } from 'react-toastify';
-import { jsPDF } from 'jspdf';
+import { useStore } from '../../store';
 
 interface RouteBreakdown {
   route: string;
@@ -51,6 +52,7 @@ interface FilterOption {
   name?: string;
   origin?: string;
   destination?: string;
+  registration_number?: string;
 }
 
 type SummaryPeriod = 'daily' | 'weekly' | 'monthly';
@@ -202,13 +204,15 @@ const Reconciliation: React.FC = () => {
       // Payment method breakdown
       const allBookings = [...tickets, ...parcels];
       const paymentMethods = allBookings.reduce((acc, booking) => {
-        acc[booking.payment_method] = (acc[booking.payment_method] || 0) + Number(booking.price);
+        const method = booking.payment_method as 'cash' | 'mpesa';
+        acc[method] = (acc[method] || 0) + Number(booking.price);
         return acc;
       }, { cash: 0, mpesa: 0 });
 
       // Route breakdown
-      const routeBreakdown = allBookings.reduce((acc, booking) => {
-        const routeName = `${booking.route?.origin} - ${booking.route?.destination}`;
+      const routeBreakdown = allBookings.reduce<RouteBreakdown[]>((acc, booking) => {
+        const route = booking.route as unknown as { origin: string; destination: string } | null;
+        const routeName = `${route?.origin} - ${route?.destination}`;
         const existing = acc.find(r => r.route === routeName);
         if (existing) {
           existing.amount += Number(booking.price);
@@ -224,8 +228,9 @@ const Reconciliation: React.FC = () => {
       }, []);
 
       // Bus breakdown
-      const busBreakdown = allBookings.reduce((acc, booking) => {
-        const busName = booking.bus?.name || 'Unassigned';
+      const busBreakdown = allBookings.reduce<BusBreakdown[]>((acc, booking) => {
+        const bus = booking.bus as unknown as { name: string } | null;
+        const busName = bus?.name || 'Unassigned';
         const existing = acc.find(b => b.bus === busName);
         if (existing) {
           existing.amount += Number(booking.price);
@@ -241,8 +246,9 @@ const Reconciliation: React.FC = () => {
       }, []);
 
       // Clerk breakdown
-      const clerkBreakdown = allBookings.reduce((acc, booking) => {
-        const clerkName = booking.booked_by_profile?.name || 'Unknown';
+      const clerkBreakdown = allBookings.reduce<ClerkBreakdown[]>((acc, booking) => {
+        const profile = booking.booked_by_profile as unknown as { name: string } | null;
+        const clerkName = profile?.name || 'Unknown';
         const existing = acc.find(c => c.clerk === clerkName);
         if (existing) {
           existing.amount += Number(booking.price);
@@ -258,9 +264,9 @@ const Reconciliation: React.FC = () => {
       }, []);
 
       // Outstanding payments (for demonstration - you might want to add a separate table for this)
-      const outstandingPayments = [
-        { customer: 'John Doe', amount: 5000, currency: 'KES', dueDate: '2024-01-15', type: 'Corporate Booking' },
-        { customer: 'ABC Company', amount: 15000, currency: 'KES', dueDate: '2024-01-20', type: 'Monthly Contract' }
+      const outstandingPayments: OutstandingPayment[] = [
+        { customer: 'John Doe', amount: 5000, currency: 'KES', dueDate: '2024-01-15', type: 'Corporate Booking', status: 'pending' },
+        { customer: 'ABC Company', amount: 15000, currency: 'KES', dueDate: '2024-01-20', type: 'Monthly Contract', status: 'pending' }
       ];
 
       setSummary({

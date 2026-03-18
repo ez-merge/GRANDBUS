@@ -1,10 +1,11 @@
+import type { DashboardStats, Passenger, Route, User } from '../types';
+import { buses, seats } from '../api';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { seats, buses } from '../api';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@supabase/supabase-js';
-import type { Route, User, DashboardStats, Passenger } from '../types';
 import { format } from 'date-fns';
+import { persist } from 'zustand/middleware';
 
 const IDLE_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
 
@@ -593,7 +594,8 @@ export const useDashboardStats = () => {
       if (popularError) throw popularError;
 
       const routeStats = popularRoutes?.reduce((acc: { [key: string]: number }, booking) => {
-        const routeName = `${booking.route.origin} - ${booking.route.destination}`;
+        const route = booking.route as unknown as { origin: string; destination: string };
+        const routeName = `${route.origin} - ${route.destination}`;
         acc[routeName] = (acc[routeName] || 0) + 1;
         return acc;
       }, {});

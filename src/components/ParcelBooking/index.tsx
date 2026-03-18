@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { useStore, useRoutes, useBuses, useAddParcel } from '../../store';
-import { Route, Bus } from '../../types';
-import SelectRoute from '../BookTicket/SelectRoute';
-import SelectBus from './SelectBus';
+import { Bus, Route } from '../../types';
+import React, { useEffect, useState } from 'react';
+import { useAddParcel, useBuses, useRoutes, useStore } from '../../store';
+
 import ParcelDetails from './ParcelDetails';
 import type { ParcelFormDetails } from './ParcelDetails';
 import ParcelSummary from './ParcelSummary';
+import SelectBus from './SelectBus';
+import SelectRoute from '../BookTicket/SelectRoute';
 import { format } from 'date-fns';
+import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 
@@ -16,7 +17,7 @@ type BookingStep = 'route' | 'bus' | 'details' | 'summary';
 const ParcelBooking: React.FC = () => {
   const navigate = useNavigate();
   const { currentUser } = useStore();
-  const { data: routes = [] } = useRoutes();
+  useRoutes();
   const { data: buses = [] } = useBuses();
   const addParcelMutation = useAddParcel();
   
@@ -39,13 +40,14 @@ const ParcelBooking: React.FC = () => {
     }
   }, [currentUser, navigate]);
   
-  const handleRouteSelect = (route: Route, origin: string, destination: string) => {
+  const handleRouteSelect = (route: Route, origin: string, destination: string, _price?: number) => {
     setSelectedRoute(route);
     setSelectedOrigin(origin);
     setSelectedDestination(destination);
     setCurrency(route.currency);
     if ('selectedDate' in route) {
-      setDepartureDate(route.selectedDate);
+      const selectedDate = (route as Route & { selectedDate?: string }).selectedDate;
+      if (selectedDate) setDepartureDate(selectedDate);
     }
     setCurrentStep('bus');
   };
@@ -79,7 +81,7 @@ const ParcelBooking: React.FC = () => {
         receiverPhone: details.receiverPhone,
         itemType: details.itemType,
         itemName: details.itemName,
-        weight: details.weight,
+        weight: details.weight ?? undefined,
         description: details.description,
         departureDate,
         departureTime: selectedBus ? departureTime : '00:00',
@@ -94,9 +96,9 @@ const ParcelBooking: React.FC = () => {
       setParcelDetails(details);
       setCurrentStep('summary');
       toast.success('Parcel booking created successfully!');
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to create parcel booking:', error);
-      if (error.message?.includes('row-level security')) {
+      if (error instanceof Error && error.message?.includes('row-level security')) {
         toast.error('Authentication error. Please try logging in again.');
         navigate('/login');
       } else {
@@ -122,7 +124,7 @@ const ParcelBooking: React.FC = () => {
   const renderStep = () => {
     switch (currentStep) {
       case 'route':
-        return <SelectRoute routes={routes} onSelect={handleRouteSelect} />;
+        return <SelectRoute onSelect={handleRouteSelect} />;
       case 'bus':
         return selectedRoute ? 
           <SelectBus 
@@ -155,7 +157,7 @@ const ParcelBooking: React.FC = () => {
             receiverPhone={parcelDetails?.receiverPhone}
             itemType={parcelDetails?.itemType}
             itemName={parcelDetails?.itemName}
-            weight={parcelDetails?.weight}
+            weight={parcelDetails?.weight ?? undefined}
             description={parcelDetails?.description}
             onNewBooking={resetBooking}
           /> : null;
@@ -215,8 +217,8 @@ const ParcelBooking: React.FC = () => {
               transition={{ duration: 0.2 }}
             >
               {index < ['route', 'bus', 'details', 'summary'].indexOf(currentStep) ? (
-                <svg className="w-6 h-6\" fill="none\" stroke="currentColor\" viewBox="0 0 24 24\" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round\" strokeLinejoin="round\" strokeWidth={2} d="M5 13l4 4L19 7" />
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               ) : (
                 index + 1

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { useStore } from '../../store';
 import { ArrowLeft, Building } from 'lucide-react';
-import { supabase } from '../../api';
+import React, { useState } from 'react';
+
 import type { Office } from '../../types';
+import { motion } from 'framer-motion';
+import { supabase } from '../../api';
+import { useStore } from '../../store';
 
 export interface ParcelFormDetails {
   senderName: string;
@@ -12,7 +13,7 @@ export interface ParcelFormDetails {
   receiverPhone: string;
   itemType: string;
   itemName: string;
-  weight: string;
+  weight: number | null;
   description: string;
 }
 
