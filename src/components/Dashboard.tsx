@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import Calendar from 'react-calendar';
 import { format, isValid } from 'date-fns';
 import { useStore, useDashboardStats } from '../store';
+import type { Passenger } from '../types';
 import 'react-calendar/dist/Calendar.css';
 
 const Dashboard: React.FC = () => {
@@ -62,7 +63,7 @@ const Dashboard: React.FC = () => {
         return 'Invalid Date';
       }
       return format(date, 'MMM d, yyyy');
-    } catch (error) {
+    } catch {
       return 'Invalid Date';
     }
   };
@@ -290,8 +291,8 @@ const Dashboard: React.FC = () => {
                 >
                   <div>
                     <p className="font-medium">
-                      {(booking.passengers as any[])[0].firstName}{' '}
-                      {(booking.passengers as any[])[0].lastName}
+                      {(booking.passengers as Passenger[])[0].firstName}{' '}
+                      {(booking.passengers as Passenger[])[0].lastName}
                     </p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                       {`${booking.route.origin} - ${booking.route.destination}`} • {formatDate(booking.departure_date)}

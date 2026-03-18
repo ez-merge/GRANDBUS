@@ -9,7 +9,7 @@ import OfficeManagement from './OfficeManagement';
 type ManagementTab = 'routes' | 'buses' | 'staff' | 'offices';
 
 const Management: React.FC = () => {
-  const { currentUser, darkMode } = useStore();
+  const { currentUser } = useStore();
   const [activeTab, setActiveTab] = useState<ManagementTab>('routes');
   
   // Redirect non-admin users

@@ -46,7 +46,7 @@ const TicketSummary: React.FC<TicketSummaryProps> = ({
       baseDate.setHours(hours, minutes, 0, 0);
       const reportingDateTime = addMinutes(baseDate, -30);
       return format(reportingDateTime, 'h:mm a');
-    } catch (error) {
+    } catch {
       return 'Invalid Time';
     }
   };
@@ -61,7 +61,7 @@ const TicketSummary: React.FC<TicketSummaryProps> = ({
         month: format(date, 'MMM'),
         year: format(date, 'yyyy')
       };
-    } catch (error) {
+    } catch {
       return {
         dayOfWeek: '--',
         day: '--',
@@ -77,7 +77,7 @@ const TicketSummary: React.FC<TicketSummaryProps> = ({
       const date = new Date();
       date.setHours(hours, minutes, 0, 0);
       return format(date, 'h:mm a');
-    } catch (error) {
+    } catch {
       return timeString;
     }
   };
@@ -219,7 +219,7 @@ const TicketSummary: React.FC<TicketSummaryProps> = ({
       doc.text(`Bus: ${bus}`, width - doc.getTextWidth(`Bus: ${bus}`) + margin, y);
       y += 20;
       
-      const qrData = `REF:${bookingRef}\nBUS:${bus}\nDATE:${departureDate}\nTIME:${departureTime}`;
+      const _qrData = `REF:${bookingRef}\nBUS:${bus}\nDATE:${departureDate}\nTIME:${departureTime}`;
       const qrSize = 50;
       const qrX = (226.77 - qrSize) / 2;
       

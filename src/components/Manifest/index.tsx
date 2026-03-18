@@ -1,14 +1,65 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { format, isBefore, startOfDay } from 'date-fns';
 import { useStore } from '../../store';
 import { useRoutes, useBuses } from '../../store';
 import { manifest } from '../../api';
-import { ChevronDown, ChevronUp, Printer, Clock, XCircle, Store, Search, MoreVertical } from 'lucide-react';
+import { ChevronDown, ChevronUp, Printer, Clock, Store, Search, MoreVertical } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { toast } from 'react-toastify';
 import QRCode from 'qrcode';
 import logo from '../../assets/logo.png';
+
+interface ManifestPassenger {
+  firstName: string;
+  lastName: string;
+  phoneNumber?: string;
+  idNumber?: string;
+  nationality?: string;
+  gender?: string;
+  age?: number;
+}
+
+interface ManifestBooking {
+  id: string;
+  booking_ref?: string;
+  parcel_ref?: string;
+  bus_id?: string;
+  route_id?: string;
+  departure_date: string;
+  departure_time?: string;
+  passengers?: ManifestPassenger[];
+  seats?: number[];
+  price?: number;
+  currency?: string;
+  payment_method?: string;
+  booked_by?: string;
+  destination?: string;
+  is_cancelled?: boolean;
+  cancellation_reason?: string;
+  cancelled_by?: string | { name: string };
+  cancelled_at?: string;
+  sender_name?: string;
+  sender_phone?: string;
+  receiver_name?: string;
+  receiver_phone?: string;
+  item_name?: string;
+  item_type?: string;
+  weight?: number;
+  description?: string;
+  office_id?: string;
+  stored_date?: string;
+  type?: string;
+  reason?: string;
+  route?: { origin: string; destination: string } | string;
+  bus?: { name: string } | string;
+}
+
+interface ManifestBus {
+  id: string;
+  name: string;
+  registration_number?: string;
+  type?: string;
+}
 
 const loadLogoAsDataUrl = async (): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -38,23 +89,23 @@ const Manifest: React.FC = () => {
   const [selectedRoute, setSelectedRoute] = useState<string>('all');
   const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [expandedBuses, setExpandedBuses] = useState<string[]>([]);
-  const [bookings, setBookings] = useState<any[]>([]);
-  const [parcelsInStore, setParcelsInStore] = useState<any[]>([]);
-  const [cancelledBookings, setCancelledBookings] = useState<any[]>([]);
+  const [bookings, setBookings] = useState<ManifestBooking[]>([]);
+  const [parcelsInStore, setParcelsInStore] = useState<ManifestBooking[]>([]);
+  const [cancelledBookings, setCancelledBookings] = useState<ManifestBooking[]>([]);
   const [showCancellationModal, setShowCancellationModal] = useState(false);
-  const [selectedBooking, setSelectedBooking] = useState<any>(null);
+  const [selectedBooking, setSelectedBooking] = useState<ManifestBooking | null>(null);
   const [cancellationReason, setCancellationReason] = useState('');
   const [isCancelling, setIsCancelling] = useState(false);
   const [manifestType, setManifestType] = useState<'tickets' | 'parcels'>('tickets');
   const [showDispatchModal, setShowDispatchModal] = useState(false);
-  const [selectedParcel, setSelectedParcel] = useState<any>(null);
+  const [selectedParcel, setSelectedParcel] = useState<ManifestBooking | null>(null);
   const [selectedDispatchBus, setSelectedDispatchBus] = useState<string>('');
   const [isDispatching, setIsDispatching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [availableBuses, setAvailableBuses] = useState<any[]>([]);
+  const [availableBuses, setAvailableBuses] = useState<ManifestBus[]>([]);
   const [actionMenuOpen, setActionMenuOpen] = useState<string | null>(null);
 
-  const handleCancelBooking = (booking: any) => {
+  const handleCancelBooking = (booking: ManifestBooking) => {
     // Check if booking is from a past date
     const bookingDate = new Date(booking.departure_date);
     const today = startOfDay(new Date());
@@ -320,7 +371,7 @@ const Manifest: React.FC = () => {
     fetchData();
   }, [selectedDate, selectedRoute, manifestType]);
 
-  const generateQRCode = async (text: string): Promise<string> => {
+  const _generateQRCode = async (text: string): Promise<string> => {
     try {
       return await QRCode.toDataURL(text);
     } catch (error) {

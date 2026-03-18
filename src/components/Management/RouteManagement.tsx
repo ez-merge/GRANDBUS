@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useStore, useRoutes, useBuses, useAddRoute, useUpdateRoute, useDeleteRoute } from '../../store';
-import { Route, Bus, AssignedBus } from '../../types';
+import { Route, AssignedBus } from '../../types';
 import { Plus, X, Edit, Trash, Clock, DollarSign } from 'lucide-react';
 
 const RouteManagement: React.FC = () => {

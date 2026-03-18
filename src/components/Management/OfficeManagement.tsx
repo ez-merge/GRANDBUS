@@ -94,9 +94,9 @@ const OfficeManagement: React.FC = () => {
       setIsAddingOffice(false);
       setIsEditingOffice(null);
       fetchOffices();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error saving office:', error);
-      toast.error(error.message || 'Failed to save office');
+      toast.error(error instanceof Error ? error.message : 'Failed to save office');
     }
   };
 
@@ -126,9 +126,9 @@ const OfficeManagement: React.FC = () => {
       if (error) throw error;
       toast.success('Office deleted successfully');
       fetchOffices();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error deleting office:', error);
-      toast.error(error.message || 'Failed to delete office');
+      toast.error(error instanceof Error ? error.message : 'Failed to delete office');
     }
   };
 

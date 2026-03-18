@@ -474,7 +474,7 @@ export const manifest = {
     return data;
   },
 
-  getAvailableBusesForRoute: async (routeId: string, date: string) => {
+  getAvailableBusesForRoute: async (routeId: string, _date: string) => {
     const { data, error } = await supabase
       .from('bus_routes')
       .select(`

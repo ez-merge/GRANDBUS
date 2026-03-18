@@ -22,7 +22,7 @@ const SelectSeats: React.FC<SelectSeatsProps> = ({
   bus, 
   routeId,
   departureDate,
-  departureTime,
+  departureTime: _departureTime,
   price,
   currency,
   onSelect, 

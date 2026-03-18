@@ -2,16 +2,37 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useStore } from '../../store';
 import { format } from 'date-fns';
-import { Plus, X, Edit, Trash } from 'lucide-react';
+import { Plus, X, Trash } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { supabase } from '../../api';
+
+interface Expense {
+  id: string;
+  date: string;
+  category?: { name: string };
+  bus?: { name: string };
+  description: string;
+  amount: number;
+  currency: string;
+  created_by?: { name: string };
+}
+
+interface Category {
+  id: string;
+  name: string;
+}
+
+interface ExpenseBus {
+  id: string;
+  name: string;
+}
 
 const Expenses: React.FC = () => {
   const { darkMode, currentUser } = useStore();
   const [isAddingExpense, setIsAddingExpense] = useState(false);
-  const [expenses, setExpenses] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [buses, setBuses] = useState<any[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [buses, setBuses] = useState<ExpenseBus[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedBus, setSelectedBus] = useState<string>('');
   const [amount, setAmount] = useState<string>('');

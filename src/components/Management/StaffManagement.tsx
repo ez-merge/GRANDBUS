@@ -91,7 +91,7 @@ const StaffManagement: React.FC = () => {
             setIsEditingUser(null);
             setIsAddingUser(false);
           },
-          onError: (error: any) => {
+          onError: (error: Error) => {
             toast.error(error.message || 'Failed to update staff member');
           }
         }
@@ -105,7 +105,7 @@ const StaffManagement: React.FC = () => {
           toast.success('Staff member added successfully');
           setIsAddingUser(false);
         },
-        onError: (error: any) => {
+        onError: (error: Error) => {
           toast.error(error.message || 'Failed to add staff member');
         }
       });
@@ -139,7 +139,7 @@ const StaffManagement: React.FC = () => {
         onSuccess: () => {
           toast.success('Staff member deleted successfully');
         },
-        onError: (error: any) => {
+        onError: (error: Error) => {
           toast.error(error.message || 'Failed to delete staff member');
         }
       });

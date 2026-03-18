@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useStore, useRoutes } from '../../store';
 import { Route } from '../../types';
 import { Calendar as CalendarIcon, Bus } from 'lucide-react';
-import { format, addDays, isBefore, startOfToday } from 'date-fns';
+import { format, addDays, startOfToday } from 'date-fns';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 
@@ -62,7 +62,7 @@ const SelectRoute: React.FC<SelectRouteProps> = ({ onSelect }) => {
     if (originIndex === -1 || destinationIndex === -1) return 0;
 
     // Calculate price based on intermediate stops
-    let price = 0;
+    const price = 0;
     if (originIndex < destinationIndex) {
       // Forward journey
       if (originIndex === 0) {
