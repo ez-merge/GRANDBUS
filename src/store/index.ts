@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import { seats, buses } from '../api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@supabase/supabase-js';
-import type { Route, Bus, Booking, User, DashboardStats, Office } from '../types';
+import type { Route, User, DashboardStats, Passenger } from '../types';
 import { format } from 'date-fns';
 
 const IDLE_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
@@ -91,15 +91,30 @@ export const useDeleteUser = () => {
   });
 };
 
-const transformRouteData = (rawRoute: any): Route => {
+interface RawBusRoute {
+  bus_id: string;
+  departure_time: string;
+}
+
+interface RawRoute {
+  id: string;
+  origin: string;
+  destination: string;
+  intermediate_stops: { name: string; price: number }[];
+  base_price: number;
+  currency: string;
+  bus_routes: RawBusRoute[];
+}
+
+const transformRouteData = (rawRoute: RawRoute): Route => {
   return {
     id: rawRoute.id,
     origin: rawRoute.origin,
     destination: rawRoute.destination,
     intermediateStops: rawRoute.intermediate_stops || [],
     basePrice: Number(rawRoute.base_price) || 0,
-    currency: rawRoute.currency || 'KES',
-    assignedBuses: (rawRoute.bus_routes || []).map((br: any) => ({
+    currency: (rawRoute.currency || 'KES') as Route['currency'],
+    assignedBuses: (rawRoute.bus_routes || []).map((br: RawBusRoute) => ({
       id: br.bus_id,
       departureTime: br.departure_time
     }))
@@ -299,7 +314,7 @@ export const useUpdateRoute = () => {
         destination: string;
         intermediateStops: { name: string; price: number; }[];
         basePrice: number;
-        currency: string;
+  currency: string;
         assignedBuses: { id: string; departureTime: string; }[];
       };
     }) => {
@@ -373,7 +388,7 @@ export const useAddBus = () => {
 export const useUpdateBus = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, bus }: { id: string; bus: any }) => buses.updateBus(id, bus),
+    mutationFn: ({ id, bus }: { id: string; bus: { name: string; registrationNumber: string; type: string; image: string } }) => buses.updateBus(id, bus),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['buses'] });
     }
@@ -399,7 +414,7 @@ export const useAddBooking = () => {
       busId: string;
       bus: string;
       seats: number[];
-      passengers: any[];
+      passengers: Passenger[];
       departureDate: string;
       departureTime: string;
       price: number;
@@ -534,7 +549,7 @@ export const useDashboardStats = () => {
       if (passengersError) throw passengersError;
       
       const totalPassengers = bookings?.reduce((sum, booking) => {
-        const passengers = booking.passengers as any[];
+        const passengers = booking.passengers as Passenger[];
         return sum + passengers.length;
       }, 0) || 0;
 
@@ -624,7 +639,7 @@ interface Store {
 
 export const useStore = create<Store>()(
   persist(
-    (set, get) => ({
+    (set, _get) => ({
       selectedBus: null,
       selectedRoute: null,
       selectedDate: null,
@@ -681,11 +696,11 @@ export const useStore = create<Store>()(
           }
 
           return { success: false, error: 'No user data returned' };
-        } catch (error: any) {
+        } catch (error: unknown) {
           console.error('Login error:', error);
           return { 
             success: false, 
-            error: error.message || 'An error occurred during login' 
+            error: error instanceof Error ? error.message : 'An error occurred during login' 
           };
         }
       },

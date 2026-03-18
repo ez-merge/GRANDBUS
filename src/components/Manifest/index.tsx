@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import { ChevronDown, ChevronUp, Clock, MoreVertical, Printer, Search, Store } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { format, isBefore, startOfDay } from 'date-fns';
-import { useStore } from '../../store';
-import { useRoutes, useBuses } from '../../store';
-import { manifest } from '../../api';
-import { ChevronDown, ChevronUp, Printer, Clock, Store, Search, MoreVertical } from 'lucide-react';
-import { jsPDF } from 'jspdf';
-import { toast } from 'react-toastify';
+import { useBuses, useRoutes } from '../../store';
+
 import QRCode from 'qrcode';
+import { jsPDF } from 'jspdf';
 import logo from '../../assets/logo.png';
+import { manifest } from '../../api';
+import { toast } from 'react-toastify';
+import { useStore } from '../../store';
 
 interface ManifestPassenger {
   firstName: string;
@@ -50,6 +51,7 @@ interface ManifestBooking {
   stored_date?: string;
   type?: string;
   reason?: string;
+  booked_by_name?: string;
   route?: { origin: string; destination: string } | string;
   bus?: { name: string } | string;
 }
@@ -80,6 +82,27 @@ const loadLogoAsDataUrl = async (): Promise<string> => {
     img.onerror = () => reject(new Error('Failed to load logo'));
     img.src = logo;
   });
+};
+
+const getRouteDisplay = (route: ManifestBooking['route']): { origin: string; destination: string } => {
+  if (typeof route === 'object' && route) return route;
+  if (typeof route === 'string') {
+    const parts = route.split(' - ');
+    return { origin: parts[0] || '', destination: parts[1] || '' };
+  }
+  return { origin: '', destination: '' };
+};
+
+const getBusName = (bus: ManifestBooking['bus']): string => {
+  if (typeof bus === 'object' && bus) return bus.name;
+  if (typeof bus === 'string') return bus;
+  return '';
+};
+
+const getCancelledByName = (cancelledBy: ManifestBooking['cancelled_by']): string => {
+  if (typeof cancelledBy === 'object' && cancelledBy) return cancelledBy.name;
+  if (typeof cancelledBy === 'string') return cancelledBy;
+  return 'Unknown';
 };
 
 const Manifest: React.FC = () => {
@@ -149,10 +172,14 @@ const Manifest: React.FC = () => {
     }
   };
 
-  const handleDispatchParcel = async (parcel: any) => {
+  const handleDispatchParcel = async (parcel: ManifestBooking) => {
+    if (!parcel.route_id) {
+      toast.error('Parcel has no route assigned');
+      return;
+    }
     try {
       const buses = await manifest.getAvailableBusesForRoute(parcel.route_id, parcel.departure_date);
-      setAvailableBuses(buses);
+      setAvailableBuses(buses.flat());
       setSelectedParcel(parcel);
       setSelectedDispatchBus('');
       setShowDispatchModal(true);
@@ -199,7 +226,7 @@ const Manifest: React.FC = () => {
     setActionMenuOpen(actionMenuOpen === id ? null : id);
   };
 
-  const handleAction = (action: 'dispatch' | 'cancel' | 'print', item: any) => {
+  const handleAction = (action: 'dispatch' | 'cancel' | 'print', item: ManifestBooking) => {
     setActionMenuOpen(null);
     switch (action) {
       case 'dispatch':
@@ -214,7 +241,7 @@ const Manifest: React.FC = () => {
     }
   };
 
-  const ActionMenu = ({ item, showDispatch = false }: { item: any; showDispatch?: boolean }) => (
+  const ActionMenu = ({ item, showDispatch = false }: { item: ManifestBooking; showDispatch?: boolean }) => (
     <div className="relative">
       <button
         onClick={(e) => {
@@ -277,7 +304,7 @@ const Manifest: React.FC = () => {
       if (booking.booking_ref?.toLowerCase().includes(searchLower)) return true;
       
       // Search in passenger details
-      return (booking.passengers || []).some((passenger: any) => {
+      return (booking.passengers || []).some((passenger: ManifestPassenger) => {
         const fullName = `${passenger.firstName} ${passenger.lastName}`.toLowerCase();
         return fullName.includes(searchLower) || 
                passenger.phoneNumber?.includes(searchQuery) ||
@@ -312,7 +339,7 @@ const Manifest: React.FC = () => {
            parcel.item_type?.toLowerCase().includes(searchLower);
   });
 
-  const bookingsByBus = filteredBookings.reduce((acc: { [key: string]: any[] }, booking: any) => {
+  const bookingsByBus = filteredBookings.reduce((acc: { [key: string]: ManifestBooking[] }, booking: ManifestBooking) => {
     if (!booking.bus_id) return acc;
     if (!acc[booking.bus_id]) {
       acc[booking.bus_id] = [];
@@ -371,16 +398,7 @@ const Manifest: React.FC = () => {
     fetchData();
   }, [selectedDate, selectedRoute, manifestType]);
 
-  const _generateQRCode = async (text: string): Promise<string> => {
-    try {
-      return await QRCode.toDataURL(text);
-    } catch (error) {
-      console.error('Error generating QR code:', error);
-      throw error;
-    }
-  };
-
-  const printTicket = async (booking: any) => {
+  const printTicket = async (booking: ManifestBooking) => {
     try {
       const doc = new jsPDF({
         format: [226.77, 841.89],
@@ -424,7 +442,8 @@ const Manifest: React.FC = () => {
 
       if (manifestType === 'tickets') {
         doc.setFontSize(12);
-        const routeText = `${booking.route?.origin} → ${booking.route?.destination}`;
+        const routeInfo = getRouteDisplay(booking.route);
+        const routeText = `${routeInfo.origin} → ${routeInfo.destination}`;
         doc.text(routeText, centerText(routeText, 12) - 30, y);
         y += 20;
 
@@ -453,7 +472,7 @@ const Manifest: React.FC = () => {
         doc.setFontSize(10);
         
         // Calculate reporting time (30 minutes before departure)
-        const [hours, minutes] = booking.departure_time.split(':');
+        const [hours, minutes] = (booking.departure_time || '00:00').split(':');
         const departureDate = new Date();
         departureDate.setHours(parseInt(hours), parseInt(minutes) - 30);
         const reportingTime = format(departureDate, 'h:mm a');
@@ -464,7 +483,7 @@ const Manifest: React.FC = () => {
         doc.text(format(departureDate.setMinutes(departureDate.getMinutes() + 30), 'h:mm a'), width - doc.getTextWidth(format(departureDate, 'h:mm a')) + margin - 10, y + 35);
         y += 50;
 
-        (booking.passengers || []).forEach((passenger: any, index: number) => {
+        (booking.passengers || []).forEach((passenger: ManifestPassenger, index: number) => {
           doc.setFontSize(11);
           doc.text(`Passenger ${index + 1}`, margin, y);
           y += 15;
@@ -473,7 +492,7 @@ const Manifest: React.FC = () => {
           y += 12;
           doc.text(`Phone: ${passenger.phoneNumber}`, margin + 10, y);
           y += 12;
-          doc.text(`Seat: ${formatSeatNumber(booking.seats[index])}`, margin + 10, y);
+          doc.text(`Seat: ${formatSeatNumber(booking.seats?.[index] || 0)}`, margin + 10, y);
           y += 12;
           doc.text(`ID: ${passenger.idNumber}`, margin + 10, y);
           y += 20;
@@ -521,9 +540,10 @@ const Manifest: React.FC = () => {
         y += 20;
 
         // Journey details
-        doc.text(`Route: ${booking.route?.origin} - ${booking.route?.destination}`, margin, y);
+        const parcelRoute = getRouteDisplay(booking.route);
+        doc.text(`Route: ${parcelRoute.origin} - ${parcelRoute.destination}`, margin, y);
         y += 15;
-        doc.text(`Bus: ${booking.bus?.name || 'To be dispatched'}`, margin, y);
+        doc.text(`Bus: ${getBusName(booking.bus) || 'To be dispatched'}`, margin, y);
         y += 15;
         doc.text(`Date: ${format(new Date(booking.departure_date), 'MMMM d, yyyy')}`, margin, y);
         y += 15;
@@ -536,20 +556,24 @@ const Manifest: React.FC = () => {
       doc.rect(margin, y, width, 30, 'F');
       doc.setFontSize(10);
       doc.text('Amount:', margin + 10, y + 12);
-      doc.text(`${booking.currency} ${booking.price.toFixed(2)}`, width - doc.getTextWidth(`${booking.currency} ${booking.price.toFixed(2)}`) + margin - 10, y + 12);
+      const priceStr = `${booking.currency} ${(booking.price || 0).toFixed(2)}`;
+      doc.text(priceStr, width - doc.getTextWidth(priceStr) + margin - 10, y + 12);
       doc.text('Payment Method:', margin + 10, y + 27);
-      doc.text(booking.payment_method.toUpperCase(), width - doc.getTextWidth(booking.payment_method.toUpperCase()) + margin - 10, y + 27);
+      const paymentStr = (booking.payment_method || '').toUpperCase();
+      doc.text(paymentStr, width - doc.getTextWidth(paymentStr) + margin - 10, y + 27);
       y += 40;
 
       doc.text(`${manifestType === 'tickets' ? 'Booking' : 'Parcel'} Ref: ${booking.booking_ref || booking.parcel_ref}`, margin, y);
-      doc.text(`Bus: ${booking.bus?.name || 'To be dispatched'}`, width - doc.getTextWidth(`Bus: ${booking.bus?.name || 'To be dispatched'}`) + margin, y);
+      const busLabel = `Bus: ${getBusName(booking.bus) || 'To be dispatched'}`;
+      doc.text(busLabel, width - doc.getTextWidth(busLabel) + margin, y);
       y += 20;
 
       // Generate and add QR code
       try {
+        const qrBusName = getBusName(booking.bus);
         const qrData = manifestType === 'tickets' 
-          ? `REF:${booking.booking_ref}\nBUS:${booking.bus?.name}\nDATE:${booking.departure_date}\nTIME:${booking.departure_time}`
-          : `REF:${booking.parcel_ref}\nBUS:${booking.bus?.name || 'To be dispatched'}\nDATE:${booking.departure_date}\nTIME:${booking.departure_time}`;
+          ? `REF:${booking.booking_ref}\nBUS:${qrBusName}\nDATE:${booking.departure_date}\nTIME:${booking.departure_time}`
+          : `REF:${booking.parcel_ref}\nBUS:${qrBusName || 'To be dispatched'}\nDATE:${booking.departure_date}\nTIME:${booking.departure_time}`;
         
         const qrCodeDataUrl = await QRCode.toDataURL(qrData);
         const qrSize = 60;
@@ -589,7 +613,7 @@ const Manifest: React.FC = () => {
     }
   };
 
-  const printBusManifest = async (busId: string, busName: string, busBookings: any[]) => {
+  const printBusManifest = async (_busId: string, busName: string, busBookings: ManifestBooking[]) => {
     try {
       const doc = new jsPDF();
       
@@ -608,7 +632,7 @@ const Manifest: React.FC = () => {
       let y = 70;
       if (manifestType === 'tickets') {
         busBookings.forEach(booking => {
-          (booking.passengers || []).forEach((passenger: any, index: number) => {
+          (booking.passengers || []).forEach((passenger: ManifestPassenger, index: number) => {
             doc.text(`${formatSeatNumber(booking.seats?.[index] || 0)} - ${passenger?.firstName || ''} ${passenger?.lastName || ''} - ${passenger?.phoneNumber || ''}`, 20, y);
             y += 10;
           });
@@ -783,10 +807,10 @@ const Manifest: React.FC = () => {
                         {parcel.receiver_name || ''}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        {`${parcel.route?.origin || ''} - ${parcel.route?.destination || ''}`}
+                        {`${getRouteDisplay(parcel.route).origin} - ${getRouteDisplay(parcel.route).destination}`}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        {format(new Date(parcel.stored_date), 'MMM d, yyyy h:mm a')}
+                        {parcel.stored_date ? format(new Date(parcel.stored_date), 'MMM d, yyyy h:mm a') : ''}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <span className="px-2 py-1 rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
@@ -939,7 +963,7 @@ const Manifest: React.FC = () => {
                       <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
                         {busBookings.map((booking) => (
                           manifestType === 'tickets' && booking.passengers ? (
-                            (booking.passengers || []).map((passenger: any, pIndex: number) => (
+                            (booking.passengers || []).map((passenger: ManifestPassenger, pIndex: number) => (
                               <tr key={`${booking.id}-${pIndex}`}>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                                   {booking.booking_ref || ''}
@@ -954,10 +978,10 @@ const Manifest: React.FC = () => {
                                   {formatSeatNumber(booking.seats?.[pIndex] || 0)}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                  {booking.route?.origin || ''}
+                                  {getRouteDisplay(booking.route).origin}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                  {booking.route?.destination || ''}
+                                  {getRouteDisplay(booking.route).destination}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                                   {`${booking.currency || ''} ${((booking.price || 0) / ((booking.passengers || []).length || 1)).toFixed(2)}`}
@@ -987,10 +1011,10 @@ const Manifest: React.FC = () => {
                                 {booking.item_name || ''}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                {booking.route?.origin || ''}
+                                {getRouteDisplay(booking.route).origin}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                {booking.route?.destination || ''}
+                                {getRouteDisplay(booking.route).destination}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm">
                                 {`${booking.currency || ''} ${(booking.price || 0).toFixed(2)}`}
@@ -1170,16 +1194,16 @@ const Manifest: React.FC = () => {
                     {booking.booking_ref || booking.parcel_ref}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    {booking.route}
+                    {typeof booking.route === 'string' ? booking.route : `${getRouteDisplay(booking.route).origin} - ${getRouteDisplay(booking.route).destination}`}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    {booking.bus}
+                    {getBusName(booking.bus)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    {booking.cancelled_by?.name || 'Unknown'}
+                    {getCancelledByName(booking.cancelled_by)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    {format(new Date(booking.cancelled_at), 'MMM d, yyyy h:mm a')}
+                    {booking.cancelled_at ? format(new Date(booking.cancelled_at), 'MMM d, yyyy h:mm a') : ''}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     {booking.reason}

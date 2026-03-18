@@ -2,10 +2,56 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useStore } from '../../store';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
-import { Calendar, Filter, Download, TrendingUp, DollarSign, Users, CreditCard } from 'lucide-react';
+import { Download, TrendingUp, DollarSign, Users, CreditCard } from 'lucide-react';
 import { supabase } from '../../api';
 import { toast } from 'react-toastify';
 import { jsPDF } from 'jspdf';
+
+interface RouteBreakdown {
+  route: string;
+  amount: number;
+  count: number;
+}
+
+interface BusBreakdown {
+  bus: string;
+  amount: number;
+  count: number;
+}
+
+interface ClerkBreakdown {
+  clerk: string;
+  amount: number;
+  count: number;
+}
+
+interface OutstandingPayment {
+  customer: string;
+  currency: string;
+  amount: number;
+  dueDate: string;
+  type: string;
+  status: string;
+}
+
+interface ReconciliationSummary {
+  tickets: { count: number; amount: number };
+  parcels: { count: number; amount: number };
+  expenses: { count: number; amount: number };
+  netIncome: number;
+  paymentMethods: { cash: number; mpesa: number };
+  routeBreakdown: RouteBreakdown[];
+  busBreakdown: BusBreakdown[];
+  clerkBreakdown: ClerkBreakdown[];
+  outstandingPayments: OutstandingPayment[];
+}
+
+interface FilterOption {
+  id: string;
+  name?: string;
+  origin?: string;
+  destination?: string;
+}
 
 type SummaryPeriod = 'daily' | 'weekly' | 'monthly';
 type ReportType = 'overview' | 'route' | 'bus' | 'clerk' | 'payment';
@@ -19,7 +65,7 @@ const Reconciliation: React.FC = () => {
   const [selectedBus, setSelectedBus] = useState<string>('all');
   const [selectedClerk, setSelectedClerk] = useState<string>('all');
   
-  const [summary, setSummary] = useState<any>({
+  const [summary, setSummary] = useState<ReconciliationSummary>({
     tickets: { count: 0, amount: 0 },
     parcels: { count: 0, amount: 0 },
     expenses: { count: 0, amount: 0 },
@@ -31,13 +77,14 @@ const Reconciliation: React.FC = () => {
     outstandingPayments: []
   });
 
-  const [routes, setRoutes] = useState<any[]>([]);
-  const [buses, setBuses] = useState<any[]>([]);
-  const [clerks, setClerks] = useState<any[]>([]);
+  const [routes, setRoutes] = useState<FilterOption[]>([]);
+  const [buses, setBuses] = useState<FilterOption[]>([]);
+  const [clerks, setClerks] = useState<FilterOption[]>([]);
 
   useEffect(() => {
     fetchData();
     fetchFilterOptions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [period, selectedDate, reportType, selectedRoute, selectedBus, selectedClerk]);
 
   const getDateRange = () => {
@@ -297,7 +344,7 @@ const Reconciliation: React.FC = () => {
         doc.text('Top Routes by Revenue', 20, y);
         y += 15;
 
-        summary.routeBreakdown.slice(0, 5).forEach((route: any) => {
+        summary.routeBreakdown.slice(0, 5).forEach((route: RouteBreakdown) => {
           doc.setFontSize(10);
           doc.text(`${route.route}: KES ${route.amount.toFixed(2)} (${route.count} bookings)`, 25, y);
           y += 10;
@@ -311,7 +358,7 @@ const Reconciliation: React.FC = () => {
         doc.text('Top Buses by Revenue', 20, y);
         y += 15;
 
-        summary.busBreakdown.slice(0, 5).forEach((bus: any) => {
+        summary.busBreakdown.slice(0, 5).forEach((bus: BusBreakdown) => {
           doc.setFontSize(10);
           doc.text(`${bus.bus}: KES ${bus.amount.toFixed(2)} (${bus.count} bookings)`, 25, y);
           y += 10;
@@ -325,7 +372,7 @@ const Reconciliation: React.FC = () => {
         doc.text('Top Booking Clerks by Revenue', 20, y);
         y += 15;
 
-        summary.clerkBreakdown.slice(0, 5).forEach((clerk: any) => {
+        summary.clerkBreakdown.slice(0, 5).forEach((clerk: ClerkBreakdown) => {
           doc.setFontSize(10);
           doc.text(`${clerk.clerk}: KES ${clerk.amount.toFixed(2)} (${clerk.count} bookings)`, 25, y);
           y += 10;
@@ -609,7 +656,7 @@ const Reconciliation: React.FC = () => {
         } shadow-md`}>
           <h3 className="text-lg font-medium mb-4">Top Routes by Revenue</h3>
           <div className="space-y-3">
-            {summary.routeBreakdown.slice(0, 5).map((route: any, index: number) => (
+            {summary.routeBreakdown.slice(0, 5).map((route: RouteBreakdown, index: number) => (
               <div key={index} className="flex justify-between items-center">
                 <div>
                   <p className="font-medium text-sm">{route.route}</p>
@@ -627,7 +674,7 @@ const Reconciliation: React.FC = () => {
         } shadow-md`}>
           <h3 className="text-lg font-medium mb-4">Top Buses by Revenue</h3>
           <div className="space-y-3">
-            {summary.busBreakdown.slice(0, 5).map((bus: any, index: number) => (
+            {summary.busBreakdown.slice(0, 5).map((bus: BusBreakdown, index: number) => (
               <div key={index} className="flex justify-between items-center">
                 <div>
                   <p className="font-medium text-sm">{bus.bus}</p>
@@ -645,7 +692,7 @@ const Reconciliation: React.FC = () => {
         } shadow-md`}>
           <h3 className="text-lg font-medium mb-4">Top Clerks by Revenue</h3>
           <div className="space-y-3">
-            {summary.clerkBreakdown.slice(0, 5).map((clerk: any, index: number) => (
+            {summary.clerkBreakdown.slice(0, 5).map((clerk: ClerkBreakdown, index: number) => (
               <div key={index} className="flex justify-between items-center">
                 <div>
                   <p className="font-medium text-sm">{clerk.clerk}</p>
@@ -685,7 +732,7 @@ const Reconciliation: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {summary.outstandingPayments.map((payment: any, index: number) => (
+              {summary.outstandingPayments.map((payment: OutstandingPayment, index: number) => (
                 <tr key={index}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     {payment.customer}

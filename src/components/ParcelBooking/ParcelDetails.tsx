@@ -5,8 +5,19 @@ import { ArrowLeft, Building } from 'lucide-react';
 import { supabase } from '../../api';
 import type { Office } from '../../types';
 
+export interface ParcelFormDetails {
+  senderName: string;
+  senderPhone: string;
+  receiverName: string;
+  receiverPhone: string;
+  itemType: string;
+  itemName: string;
+  weight: string;
+  description: string;
+}
+
 interface ParcelDetailsProps {
-  onSubmit: (parcelDetails: any, paymentMethod: 'cash' | 'mpesa', price: number, officeId?: string) => void;
+  onSubmit: (parcelDetails: ParcelFormDetails, paymentMethod: 'cash' | 'mpesa', price: number, officeId?: string) => void;
   onBack: () => void;
   currency: string;
 }
@@ -33,11 +44,7 @@ const ParcelDetails: React.FC<ParcelDetailsProps> = ({
     description: ''
   });
 
-  React.useEffect(() => {
-    fetchOffices();
-  }, []);
-
-  const fetchOffices = async () => {
+  const fetchOffices = React.useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('offices')
@@ -55,7 +62,11 @@ const ParcelDetails: React.FC<ParcelDetailsProps> = ({
     } catch (error) {
       console.error('Error fetching offices:', error);
     }
-  };
+  }, [currentUser?.office_id]);
+
+  React.useEffect(() => {
+    fetchOffices();
+  }, [fetchOffices]);
   
   const handleSubmit = () => {
     // Validate all required fields

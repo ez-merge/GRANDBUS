@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Bus, Seat } from '../../types';
 import { useStore } from '../../store';
-import { ArrowLeft, Lock, Unlock } from 'lucide-react';
+import { ArrowLeft, Lock, Unlock, Armchair } from 'lucide-react';
 import { useLockedSeats, useBookedSeats, useLockSeats, useUnlockSeats } from '../../store';
 import { toast } from 'react-toastify';
 import { useQueryClient } from '@tanstack/react-query';
@@ -119,7 +119,7 @@ const SelectSeats: React.FC<SelectSeatsProps> = ({
   };
 
   const handleAdminLockToggle = async (seat: Seat) => {
-    if (!currentUser?.role === 'admin' || !seat || seat.isBooked) return;
+    if (currentUser?.role !== 'admin' || !seat || seat.isBooked) return;
 
     if (!seat.isLocked) {
       setShowLockReasonInput(seat.number);
@@ -208,26 +208,30 @@ const SelectSeats: React.FC<SelectSeatsProps> = ({
     
     const isSelected = selectedSeats.includes(seat.number);
     const formattedSeatNumber = formatSeatNumber(seat.number);
-    
-    let seatColor = 'bg-gray-200 dark:bg-gray-700';
+
+    let iconColor = 'text-gray-400 dark:text-gray-500';
+    let labelColor = 'text-gray-600 dark:text-gray-400';
     if (isSelected) {
-      seatColor = 'bg-blue-500 text-white';
+      iconColor = 'text-blue-500 dark:text-blue-400';
+      labelColor = 'text-blue-600 dark:text-blue-300';
     } else if (seat.isBooked) {
-      seatColor = 'bg-red-200 dark:bg-red-900 text-red-800 dark:text-red-200 cursor-not-allowed';
+      iconColor = 'text-red-400 dark:text-red-500';
+      labelColor = 'text-red-500 dark:text-red-400';
     } else if (seat.isLocked) {
-      seatColor = 'bg-yellow-200 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200';
+      iconColor = 'text-yellow-500 dark:text-yellow-400';
+      labelColor = 'text-yellow-600 dark:text-yellow-300';
     }
-    
+
     return (
       <div className="relative" key={seat.id}>
         {showLockReasonInput === seat.number ? (
-          <div className="absolute z-50 -top-20 left-1/2 transform -translate-x-1/2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3">
+          <div className="absolute z-50 -top-20 left-1/2 transform -translate-x-1/2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3 border border-gray-200 dark:border-gray-600">
             <input
               type="text"
               value={lockReason}
               onChange={(e) => setLockReason(e.target.value)}
               placeholder="Enter reason"
-              className="w-full p-2 mb-2 border rounded"
+              className="w-full p-2 mb-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
             />
             <div className="flex justify-end space-x-2">
               <button
@@ -235,7 +239,7 @@ const SelectSeats: React.FC<SelectSeatsProps> = ({
                   setShowLockReasonInput(null);
                   setLockReason('');
                 }}
-                className="px-2 py-1 text-sm text-gray-600 hover:text-gray-800"
+                className="px-2 py-1 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white"
               >
                 Cancel
               </button>
@@ -248,22 +252,31 @@ const SelectSeats: React.FC<SelectSeatsProps> = ({
             </div>
           </div>
         ) : null}
-        
+
         <motion.div
-          className={`relative w-12 h-12 rounded-t-lg flex items-center justify-center text-xs ${seatColor} ${
-            !seat.isBooked && !seat.isLocked ? 'hover:bg-blue-400 dark:hover:bg-blue-600 cursor-pointer' : 'cursor-not-allowed'
-          }`}
-          whileHover={!seat.isBooked && !seat.isLocked ? { scale: 1.05 } : {}}
+          className={`relative flex flex-col items-center justify-center w-14 h-14 rounded-lg ${
+            isSelected
+              ? 'bg-blue-50 dark:bg-blue-900/30 ring-2 ring-blue-500 dark:ring-blue-400'
+              : seat.isBooked
+              ? 'bg-red-50 dark:bg-red-900/20 cursor-not-allowed opacity-60'
+              : seat.isLocked
+              ? 'bg-yellow-50 dark:bg-yellow-900/20 cursor-not-allowed'
+              : 'bg-gray-50 dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer'
+          } transition-colors`}
+          whileHover={!seat.isBooked && !seat.isLocked ? { scale: 1.08 } : {}}
           whileTap={!seat.isBooked && !seat.isLocked ? { scale: 0.95 } : {}}
           onClick={() => handleSeatClick(seat)}
           onMouseEnter={() => setHoveredSeat(seat.number)}
           onMouseLeave={() => setHoveredSeat(null)}
         >
-          {formattedSeatNumber}
-          
+          <Armchair size={22} className={iconColor} strokeWidth={isSelected ? 2.5 : 2} />
+          <span className={`text-[10px] font-semibold mt-0.5 ${labelColor}`}>
+            {formattedSeatNumber}
+          </span>
+
           {seat.isLocked && (
-            <div className="absolute -top-1 -right-1">
-              <Lock size={14} />
+            <div className="absolute -top-1 -right-1 bg-yellow-400 dark:bg-yellow-500 rounded-full p-0.5">
+              <Lock size={10} className="text-white" />
             </div>
           )}
         </motion.div>
@@ -275,20 +288,20 @@ const SelectSeats: React.FC<SelectSeatsProps> = ({
               e.stopPropagation();
               handleAdminLockToggle(seat);
             }}
-            className={`absolute -bottom-6 left-1/2 transform -translate-x-1/2 p-1 rounded-full ${
+            className={`absolute -bottom-5 left-1/2 transform -translate-x-1/2 p-0.5 rounded-full ${
               seat.isLocked
                 ? 'bg-yellow-500 hover:bg-yellow-600'
-                : 'bg-gray-500 hover:bg-gray-600'
+                : 'bg-gray-400 dark:bg-gray-600 hover:bg-gray-500 dark:hover:bg-gray-500'
             } text-white transition-colors`}
             title={seat.isLocked ? 'Unlock seat' : 'Lock seat'}
           >
-            {seat.isLocked ? <Unlock size={12} /> : <Lock size={12} />}
+            {seat.isLocked ? <Unlock size={10} /> : <Lock size={10} />}
           </button>
         )}
-        
+
         {/* Tooltip */}
         {hoveredSeat === seat.number && (seat.isLocked || seat.isBooked) && (
-          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 p-2 bg-white dark:bg-gray-800 rounded shadow-lg text-xs z-10">
+          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg text-xs z-10 border border-gray-200 dark:border-gray-600">
             <div className="relative">
               <div className="text-gray-900 dark:text-white font-medium">
                 {seat.isBooked ? 'Seat Booked' : 'Seat Locked'}
@@ -456,20 +469,20 @@ const SelectSeats: React.FC<SelectSeatsProps> = ({
             <h3 className="text-lg font-medium">{bus.name} - {bus.type}</h3>
             <div className="flex space-x-4">
               <div className="flex items-center">
-                <div className="w-4 h-4 rounded bg-gray-200 dark:bg-gray-700 mr-2"></div>
-                <span className="text-xs">Available</span>
+                <Armchair size={16} className="text-gray-400 dark:text-gray-500 mr-1.5" />
+                <span className="text-xs text-gray-600 dark:text-gray-400">Available</span>
               </div>
               <div className="flex items-center">
-                <div className="w-4 h-4 rounded bg-blue-500 mr-2"></div>
-                <span className="text-xs">Selected</span>
+                <Armchair size={16} className="text-blue-500 dark:text-blue-400 mr-1.5" />
+                <span className="text-xs text-gray-600 dark:text-gray-400">Selected</span>
               </div>
               <div className="flex items-center">
-                <div className="w-4 h-4 rounded bg-red-200 dark:bg-red-900 mr-2"></div>
-                <span className="text-xs">Booked</span>
+                <Armchair size={16} className="text-red-400 dark:text-red-500 mr-1.5" />
+                <span className="text-xs text-gray-600 dark:text-gray-400">Booked</span>
               </div>
               <div className="flex items-center">
-                <div className="w-4 h-4 rounded bg-yellow-200 dark:bg-yellow-900 mr-2"></div>
-                <span className="text-xs">Locked</span>
+                <Armchair size={16} className="text-yellow-500 dark:text-yellow-400 mr-1.5" />
+                <span className="text-xs text-gray-600 dark:text-gray-400">Locked</span>
               </div>
             </div>
           </div>

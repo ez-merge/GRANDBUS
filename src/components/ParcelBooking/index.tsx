@@ -5,6 +5,7 @@ import { Route, Bus } from '../../types';
 import SelectRoute from '../BookTicket/SelectRoute';
 import SelectBus from './SelectBus';
 import ParcelDetails from './ParcelDetails';
+import type { ParcelFormDetails } from './ParcelDetails';
 import ParcelSummary from './ParcelSummary';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
@@ -29,7 +30,7 @@ const ParcelBooking: React.FC = () => {
   const [currency, setCurrency] = useState<string>('KES');
   const [parcelRef, setParcelRef] = useState<string>('');
   const [price, setPrice] = useState<number>(0);
-  const [parcelDetails, setParcelDetails] = useState<any>(null);
+  const [parcelDetails, setParcelDetails] = useState<ParcelFormDetails | null>(null);
 
   useEffect(() => {
     if (!currentUser) {
@@ -55,7 +56,7 @@ const ParcelBooking: React.FC = () => {
     setCurrentStep('details');
   };
   
-  const handleParcelDetails = async (details: any, paymentMethod: 'cash' | 'mpesa', price: number, officeId?: string) => {
+  const handleParcelDetails = async (details: ParcelFormDetails, paymentMethod: 'cash' | 'mpesa', price: number, officeId?: string) => {
     if (!currentUser?.id) {
       toast.error('Please log in to book a parcel');
       navigate('/login');

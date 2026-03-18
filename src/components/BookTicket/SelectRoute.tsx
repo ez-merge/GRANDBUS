@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { useStore, useRoutes } from '../../store';
-import { Route } from '../../types';
-import { Calendar as CalendarIcon, Bus } from 'lucide-react';
-import { format, addDays, startOfToday } from 'date-fns';
-import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
+
+import { Bus, Calendar as CalendarIcon } from 'lucide-react';
+import React, { useState } from 'react';
+import { addDays, format, startOfToday } from 'date-fns';
+import { useRoutes, useStore } from '../../store';
+
+import Calendar from 'react-calendar';
+import { Route } from '../../types';
+import { motion } from 'framer-motion';
 
 interface SelectRouteProps {
   onSelect: (route: Route, origin: string, destination: string, price: number) => void;
@@ -22,9 +24,12 @@ const SelectRoute: React.FC<SelectRouteProps> = ({ onSelect }) => {
   const [calculatedPrice, setCalculatedPrice] = React.useState<number>(0);
   const [showCalendar, setShowCalendar] = useState(false);
   
-  const handleDateChange = (date: Date) => {
-    setSelectedDate(format(date, 'yyyy-MM-dd'));
-    setShowCalendar(false);
+  const handleDateChange: import('react-calendar').CalendarProps['onChange'] = (value) => {
+    const date = value instanceof Date ? value : Array.isArray(value) ? value[0] : null;
+    if (date instanceof Date) {
+      setSelectedDate(format(date, 'yyyy-MM-dd'));
+      setShowCalendar(false);
+    }
   };
   
   const handleRouteSelect = (route: Route) => {

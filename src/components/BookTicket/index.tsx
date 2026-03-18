@@ -1,19 +1,19 @@
+import { Bus, Passenger, Route } from '../../types';
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { useStore, useRoutes, useBuses, useAddBooking } from '../../store';
-import SelectRoute from './SelectRoute';
-import SelectBus from './SelectBus';
-import SelectSeats from './SelectSeats';
+import { useAddBooking, useBuses, useStore } from '../../store';
+
 import PassengerDetails from './PassengerDetails';
+import SelectBus from './SelectBus';
+import SelectRoute from './SelectRoute';
+import SelectSeats from './SelectSeats';
 import TicketSummary from './TicketSummary';
-import { Route, Bus, Passenger } from '../../types';
 import { format } from 'date-fns';
+import { motion } from 'framer-motion';
 
 type BookingStep = 'route' | 'bus' | 'seats' | 'details' | 'summary';
 
 const BookTicket: React.FC = () => {
   const { currentUser } = useStore();
-  const { data: routes = [] } = useRoutes();
   const { data: buses = [] } = useBuses();
   const addBookingMutation = useAddBooking();
   
@@ -37,7 +37,7 @@ const BookTicket: React.FC = () => {
     setSelectedDestination(destination);
     setPrice(calculatedPrice);
     setCurrency(route.currency);
-    if ('selectedDate' in route) {
+    if ('selectedDate' in route && route.selectedDate) {
       setDepartureDate(route.selectedDate);
     }
     setCurrentStep('bus');
@@ -116,7 +116,7 @@ const BookTicket: React.FC = () => {
   const renderStep = () => {
     switch (currentStep) {
       case 'route':
-        return <SelectRoute routes={routes} onSelect={handleRouteSelect} />;
+        return <SelectRoute onSelect={handleRouteSelect} />;
       case 'bus':
         return selectedRoute && selectedRoute.assignedBuses ? 
           <SelectBus 
